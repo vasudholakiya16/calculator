@@ -1,12 +1,16 @@
 const express = require('express');
+const path = require('path');
 const axios = require('axios');
+const cors = require('cors');
 const app = express();
-const PORT = 9876;
+const PORT = process.env.PORT || 9876;
+
+app.use(cors());
 
 const windowSize = 10;
 let numberWindow = [];
 
-// Map of numberId to their respective third-party API endpoints
+
 const apiEndpoints = {
   p: 'http://20.244.56.144/test/primes',
   f: 'http://20.244.56.144/test/fibo',
@@ -14,16 +18,21 @@ const apiEndpoints = {
   r: 'http://20.244.56.144/test/rand',
 };
 
+// Serve the static files from the React app
+app.use(express.static(path.join(__dirname, 'average-calculator/build')));
+
+// Root route to provide a welcome message
 app.get('/', (req, res) => {
-  res.send('Welcome to the Average Calculator API. Use /numbers/:numberId to fetch numbers.');
+  res.sendFile(path.join(__dirname, 'average-calculator/build', 'index.html'));
 });
 
+// Route to fetch numbers based on numberId
 app.get('/numbers/:numberId', async (req, res) => {
   const numberId = req.params.numberId;
-  const validIds = ['1', '3', '5', '7'];
+  const validIds = ['p', 'f', 'e', 'r'];
 
   if (!validIds.includes(numberId)) {
-    return res.status(400).send('Invalid number ID');
+    return res.status(400).json({ error: 'Invalid number ID' });
   }
 
   const thirdPartyApi = apiEndpoints[numberId];
@@ -59,8 +68,13 @@ app.get('/numbers/:numberId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching numbers:', error.message);
-    res.status(500).send('Error fetching numbers');
+    res.status(500).json({ error: 'Error fetching numbers' });
   }
+});
+
+// Catch-all handler to return the React app for any request not handled by the API
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'average-calculator/build', 'index.html'));
 });
 
 app.listen(PORT, () => {
